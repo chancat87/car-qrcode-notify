@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>挪车通知服务</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 420px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            padding: 30px 20px;
+            text-align: center;
+            position: relative;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #ff9a9e, #fad0c4, #fad0c4, #ff9a9e);
+        }
+
+        .header h1 {
+            font-size: 28px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .header p {
+            font-size: 16px;
+            opacity: 0.9;
+            margin-bottom: 5px;
+        }
+
+        .content {
+            padding: 30px 25px;
+        }
+
+        .vehicle-info {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 25px;
+            border-left: 4px solid #4facfe;
+        }
+
+        .info-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 12px;
+            color: #555;
+        }
+
+        .info-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .info-item i {
+            width: 24px;
+            color: #4facfe;
+            margin-right: 12px;
+        }
+
+        .action-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            padding: 18px 24px;
+            border: none;
+            border-radius: 12px;
+            font-size: 17px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+
+        .btn:active::before {
+            width: 300px;
+            height: 300px;
+        }
+
+        .btn-notify {
+            background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+            color: white;
+            box-shadow: 0 6px 20px rgba(67, 233, 123, 0.3);
+        }
+
+        .btn-notify:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(67, 233, 123, 0.4);
+        }
+
+        .btn-call {
+            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+            color: white;
+            box-shadow: 0 6px 20px rgba(250, 112, 154, 0.3);
+        }
+
+        .btn-call:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(250, 112, 154, 0.4);
+        }
+
+        .btn i {
+            font-size: 20px;
+        }
+
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(5px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #4facfe;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: rgba(0, 0, 0, 0.85);
+            color: white;
+            padding: 16px 28px;
+            border-radius: 50px;
+            font-size: 16px;
+            opacity: 0;
+            transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            z-index: 1001;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            max-width: 90%;
+            text-align: center;
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .toast.success {
+            background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+        }
+
+        .toast.error {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ffa8a8 100%);
+        }
+
+        .history {
+            margin-top: 25px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+
+        .history h3 {
+            color: #555;
+            margin-bottom: 15px;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .history-item {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 12px 15px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 14px;
+        }
+
+        .history-time {
+            color: #888;
+            font-size: 13px;
+        }
+
+        .history-type {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .history-type.notify {
+            background: rgba(67, 233, 123, 0.15);
+            color: #43e97b;
+        }
+
+        .history-type.call {
+            background: rgba(250, 112, 154, 0.15);
+            color: #fa709a;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 20px;
+            color: #888;
+            font-size: 13px;
+            border-top: 1px solid #eee;
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                border-radius: 15px;
+            }
+            
+            .header {
+                padding: 25px 15px;
+            }
+            
+            .content {
+                padding: 25px 20px;
+            }
+            
+            .btn {
+                padding: 16px 20px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1><i class="fas fa-car"></i> 挪车通知服务</h1>
+            <p>快速联系车主，解决停车困扰</p>
+            <p style="font-size: 14px; margin-top: 5px;">安全、便捷、高效</p>
+        </div>
+
+        <div class="content">
+            <div class="vehicle-info">
+                <div class="info-item">
+                    <i class="fas fa-car"></i>
+                    <span>车辆信息：{{no}}</span>
+                </div>
+                <div class="info-item">
+                    <i class="fas fa-map-marker-alt"></i>
+                    <span>当前位置：待获取</span>
+                </div>
+                <div class="info-item">
+                    <i class="fas fa-clock"></i>
+                    <span>发现时间：<span id="discoveryTime">刚刚</span></span>
+                </div>
+            </div>
+
+            <div class="action-buttons">
+                <button class="btn btn-notify" onclick="confirmNotify()">
+                    <i class="fas fa-bell"></i>
+                    通知车主挪车
+                </button>
+                <button class="btn btn-call" onclick="confirmCall()">
+                    <i class="fas fa-phone-alt"></i>
+                    拨打车主电话
+                </button>
+            </div>
+
+            <div class="history">
+                <h3><i class="fas fa-history"></i> 操作记录</h3>
+                <div id="historyList">
+                    <!-- 操作记录会动态添加到这里 -->
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>© 2023 挪车通知服务 | 保护隐私，安全可靠</p>
+        </div>
+    </div>
+
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="loading-spinner"></div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script>
+function getCarId() {
+    // 获取当前路径，例如 "/car/1" 或 "/car/1?ref=home"
+    const pathname = window.location.pathname;
+    
+    // 使用正则表达式匹配路径末尾的数字
+    const match = pathname.match(/\/(\d+)$/);
+    
+    // 如果匹配成功，返回捕获组中的数字；否则返回 null
+    return match ? match[1] : null;
+}
+
+        // 显示加载状态
+        function showLoading(show) {
+            const overlay = document.getElementById('loadingOverlay');
+            overlay.style.display = show ? 'flex' : 'none';
+        }
+
+        // 显示提示消息
+        function showToast(message, type = 'info', duration = 3000) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = 'toast';
+            
+            if (type === 'success') {
+                toast.classList.add('success');
+            } else if (type === 'error') {
+                toast.classList.add('error');
+            }
+            
+            toast.classList.add('show');
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, duration);
+        }
+
+        // 添加操作记录
+        function addHistory(type, message) {
+            const historyList = document.getElementById('historyList');
+            const now = new Date();
+            const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+            
+            const historyItem = document.createElement('div');
+            historyItem.className = 'history-item';
+            historyItem.innerHTML = `
+                <div>
+                    <span>${message}</span>
+                    <div class="history-time">${timeStr}</div>
+                </div>
+                <span class="history-type ${type}">${type === 'notify' ? '通知' : '电话'}</span>
+            `;
+            
+            // 添加到列表顶部
+            historyList.insertBefore(historyItem, historyList.firstChild);
+            
+            // 限制最多显示5条记录
+            if (historyList.children.length > 5) {
+                historyList.removeChild(historyList.lastChild);
+            }
+        }
+
+        // 确认通知操作
+        function confirmNotify() {
+            if (confirm('确定要发送挪车通知给车主吗？')) {
+                sendNotify();
+            }
+        }
+
+        // 确认电话操作
+        function confirmCall() {
+            if (confirm('确定要拨打车主电话吗？')) {
+                makeCall();
+            }
+        }
+
+        // 发送通知
+        function sendNotify() {
+            let id = getCarId();
+
+            if (!id) {
+                showToast("未获取到车辆ID参数", 'error');
+                return;
+            }
+
+            showLoading(true);
+            
+            fetch("/api/notify/message", {
+                method: "POST",
+                headers: { 
+                    "Content-Type": "application/json",
+                    "X-Requested-With": "XMLHttpRequest"
+                },
+                body: JSON.stringify({
+                    id: id,
+                    message: "您的车辆需要挪动，请及时处理。"
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                showLoading(false);
+                if (data.code === 200) {
+                    showToast("通知已成功发送给车主", 'success');
+                    addHistory('notify', '已发送挪车通知');
+                    
+                    // 更新发现时间
+                    document.getElementById('discoveryTime').textContent = '刚刚';
+                } else {
+                    showToast(data.data || "发送失败", 'error');
+                }
+            })
+            .catch(error => {
+                showLoading(false);
+                console.error("发送通知失败:", error);
+                showToast("网络连接异常，请稍后重试", 'error');
+            });
+        }
+
+        // 拨打车主电话
+        function makeCall() {
+            let id = getCarId();
+
+            if (!id) {
+                showToast("未获取到车辆ID参数", 'error');
+                return;
+            }
+
+            showLoading(true);
+            
+            fetch("/api/notify/call", {
+                method: "POST",
+                headers: { 
+                    "Content-Type": "application/json",
+                    "X-Requested-With": "XMLHttpRequest"
+                },
+                body: JSON.stringify({ id: id })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                showLoading(false);
+                if (data.code === 200) {
+                    showToast("正在拨打车主电话...", 'success');
+                    addHistory('call', '已拨打车主电话');
+                    
+                    // 延迟跳转，让用户看到提示
+                    setTimeout(() => {
+                        window.location.href = "tel:" + data.data;
+                    }, 1000);
+                } else {
+                    showToast(data.data || "获取电话失败", 'error');
+                }
+            })
+            .catch(error => {
+                showLoading(false);
+                console.error("拨打电话失败:", error);
+                showToast("网络连接异常，请稍后重试", 'error');
+            });
+        }
+
+        // 页面加载时初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            const id = getQueryVariable("id");
+            if (id) {
+                // 可以在这里获取更多车辆信息
+                console.log("车辆ID:", id);
+            }
+            
+            // 设置发现时间
+            const now = new Date();
+            const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+            document.getElementById('discoveryTime').textContent = timeStr;
+        });
+    </script>
+</body>
+</html>

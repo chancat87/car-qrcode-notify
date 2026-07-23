@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+  <html lang="zh-CN">
+  
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+      content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>通知车主挪车</title>
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+  
+      :root {
+        --primary-color: #4776E6;
+        --secondary-color: #8E54E9;
+        --text-color: #2c3e50;
+        --shadow-color: rgba(0, 0, 0, 0.1);
+      }
+  
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        color: var(--text-color);
+        padding: 20px;
+        line-height: 1.6;
+      }
+  
+      .container {
+        text-align: center;
+        padding: 40px 30px;
+        width: 100%;
+        max-width: 400px;
+        border-radius: 16px;
+        box-shadow: 0 10px 40px var(--shadow-color);
+        background: rgba(255, 255, 255, 0.95);
+        /* backdrop-filter: blur(10px); */
+        transform: translateY(0);
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+  
+      .container:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 15px 50px rgba(0, 0, 0, 0.15);
+      }
+  
+      h1 {
+        /* font-size: 32px;  */
+        margin-bottom: 25px;
+        background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        font-weight: 700;
+      }
+  
+      .car-icon {
+        font-size: 64px;
+        margin-bottom: 25px;
+        display: inline-block;
+        animation: float 6s ease-in-out infinite;
+      }
+  
+      p {
+        margin-bottom: 30px;
+        /* font-size: 18px;  */
+        color: #546e7a;
+        line-height: 1.8;
+      }
+  
+      .button-group {
+        display: flex;
+        flex-wrap: wrap;
+        /* 允许子元素换行 */
+        justify-content: space-between;
+        /* 子元素在主轴上均匀分布 */
+        gap: 10px;
+        margin-bottom: 20px;
+      }
+  
+      button {
+        flex: 1;
+        padding: 10px;
+        /* font-size: 18px; 
+              font-weight: 600;  */
+        border-radius: 10px;
+        color: #fff;
+        border: none;
+  
+        cursor: pointer;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+      }
+  
+      button:active {
+        transform: scale(0.98);
+      }
+  
+      .action-btn {
+        background: linear-gradient(45deg, #546c7c, #546c7c);
+        box-shadow: 0 4px 15px rgba(71, 118, 230, 0.2);
+      }
+  
+      .action-btn:hover {
+        box-shadow: 0 6px 20px rgba(71, 118, 230, 0.3);
+        transform: translateY(-2px);
+      }
+  
+      .notify-btn {
+        background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
+        box-shadow: 0 4px 15px rgba(71, 118, 230, 0.2);
+      }
+  
+      .notify-btn:hover {
+        box-shadow: 0 6px 20px rgba(71, 118, 230, 0.3);
+        transform: translateY(-2px);
+      }
+  
+      .call-btn {
+        background: linear-gradient(45deg, #00b09b, #96c93d);
+        box-shadow: 0 4px 15px rgba(0, 176, 155, 0.2);
+      }
+  
+      .call-btn:hover {
+        box-shadow: 0 6px 20px rgba(0, 176, 155, 0.3);
+        transform: translateY(-2px);
+      }
+  
+      @keyframes float {
+        0% {
+          transform: translateY(0px) rotate(0deg);
+        }
+  
+        50% {
+          transform: translateY(-20px) rotate(5deg);
+        }
+  
+        100% {
+          transform: translateY(0px) rotate(0deg);
+        }
+      }
+  
+      .loading {
+        pointer-events: none;
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+      }
+  
+      .loading::after {
+        content: "";
+        position: absolute;
+        width: 20px;
+        height: 20px;
+        border: 3px solid #ffffff;
+        border-radius: 50%;
+        border-top-color: transparent;
+        animation: spin 0.8s linear infinite;
+      }
+  
+      @keyframes spin {
+          0% { transform: translate(-50%, -50%) rotate(0deg); }
+          100% { transform: translate(-50%, -50%) rotate(360deg); }
+      }
+  
+      .toast {
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(0, 0, 0, 0.8);
+        color: white;
+        padding: 12px 24px;
+        border-radius: 50px;
+        font-size: 16px;
+        opacity: 0;
+        transition: opacity 0.3s;
+      }
+  
+      .toast.show {
+        opacity: 1;
+      }
+  
+      textarea {
+        width: 100%;
+        padding: 10px;
+        margin-bottom: 20px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+      }
+  
+      .modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+      }
+
+      .hide-notify{
+          
+      }
+
+      .hide-call{
+          
+      }
+    </style>
+  </head>
+  
+  <body>
+    <div class="container">
+      <div class="car-icon">🚗</div>
+      <h1>温馨提示</h1>
+      <p>不好意思阻碍到您的出行了<br>请通过以下方式联系我，我会立即前来挪车</p>
+      <div class="button-group hide-notify">
+          <textarea rows="5" id="notifyMessage" placeholder="给车主留言">车主，有人需要您挪车，请及时处理一下哦。</textarea>
+      </div>        
+      <div class="button-group hide-notify">
+        <button class="action-btn" data-msg="车主，有人需要您挪车，请及时处理一下哦。">
+          <span>挪车</span>
+        </button>
+        <button class="action-btn" data-msg="车主，您爱车的车窗未关，请及时处理一下哦。">
+          <span>未关窗</span>
+        </button>
+      </div>
+      <div class="button-group hide-notify">
+        <button class="action-btn" data-msg="车主，您爱车的车灯未关，请及时处理一下哦。">
+          <span>未关灯</span>
+        </button>
+        <button class="action-btn" data-msg="车主，此处有交警查车，请及时处理一下哦。">
+          <span>交警</span>
+        </button>
+      </div>
+      <div class="button-group">
+        <button class="notify-btn hide-notify" onclick="notifyOwner()">
+          <span>微信通知</span> 📱
+        </button>
+        <button class="call-btn hide-call" onclick="callOwner()">
+          <span>电话联系</span> 📞
+        </button>
+      </div>
+    </div>
+    <div id="toast" class="toast"></div>
+    <div id="loadingBox" class="modal">
+      <div class="loading"></div>
+    </div>
+    <script>
+  
+      document.addEventListener('DOMContentLoaded', () => {
+        let btns = document.querySelectorAll(".action-btn");
+        btns.forEach(element => {
+          element.addEventListener("click", function (e) {
+            document.getElementById("notifyMessage").value = e.currentTarget.dataset.msg;
+          })
+        });
+      });
+  
+      function showToast(message, duration = 5000) {
+        const toast = document.getElementById('toast');
+        toast.textContent = message;
+        toast.classList.add('show');
+        setTimeout(() => {
+          toast.classList.remove('show');
+        }, duration);
+      }
+  
+      // 显示关闭加载框
+      function showLoading(isShow) {
+        if (isShow) {
+          document.getElementById('loadingBox').style.display = 'block';
+        }
+        else {
+          document.getElementById('loadingBox').style.display = 'none';
+        }
+      }
+  
+function getCarId() {
+    // 获取当前路径，例如 "/car/1" 或 "/car/1?ref=home"
+    const pathname = window.location.pathname;
+    
+    // 使用正则表达式匹配路径末尾的数字
+    const match = pathname.match(/\/(\d+)$/);
+    
+    // 如果匹配成功，返回捕获组中的数字；否则返回 null
+    return match ? match[1] : null;
+}
+  
+      // 发送通知
+      function notifyOwner() {
+        let id = getCarId();
+        let message = document.getElementById("notifyMessage").value || "您好，有人需要您挪车，请及时处理。"
+        if (!id) {
+          showToast("未获取到id参数");
+          return;
+        }
+        showLoading(true);
+        fetch("/api/notify/message", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id: id,
+            message: message
+          })
+        })
+          .then(response => response.json())
+          .then(data => {
+            showLoading(false);
+            showToast(data.data);
+          })
+          .catch(error => {
+            showLoading(false);
+            console.error("Error sending notification:", error);
+            alert("通知发送出错，请检查网络连接。");
+          });
+      }
+  
+      // 拨打车主电话
+      function callOwner() {
+        let id = getCarId();
+  
+        if (!id) {
+          showToast("未获取到id参数");
+          return;
+        }
+        showLoading(true);
+        fetch("/api/notify/call", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id: id,
+          })
+        })
+          .then(response => response.json())
+          .then(data => {
+            showLoading(false);
+            if (data.code === 200) {
+              window.location.href = "tel:" + data.data;
+            } else {
+              alert(data.data);
+            }
+          })
+          .catch(error => {
+            showLoading(false);
+            console.error("Error sending notification:", error);
+            alert("通知发送出错，请检查网络连接。");
+          });
+      }
+    </script>
+</body>
+  
+  </html>

@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>临停挪车</title>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #fff;
+            text-align: center;
+            padding: 20px;
+            background-size: 100% 100%;
+        }
+
+        .container {
+            max-width: 400px;
+            width: 100%;
+        }
+
+        .car-card {
+            background: linear-gradient(135deg, #00a854 0%, #00d26a 48%, #45e386 100%);
+            color: #fff;
+            padding: 30px 20px;
+            border-radius: 20px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0, 168, 84, 0.25);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .car-card::before {
+            content: "";
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.22), transparent 35%),
+                radial-gradient(circle at 70% 20%, rgba(255, 255, 255, 0.18), transparent 40%);
+            pointer-events: none;
+        }
+
+        .car-number {
+            font-size: 42px;
+            font-weight: bold;
+            color: #fff;
+            letter-spacing: 2px;
+            position: relative;
+            z-index: 1;
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .notice {
+            font-size: 16px;
+            line-height: 1.7;
+            margin: 0 auto 35px;
+            max-width: 340px;
+            opacity: 0.95;
+        }
+
+        .wx-box {
+            margin: 0 auto 25px;
+            width: 160px;
+            height: 160px;
+            background: #fff;
+            padding: 10px;
+            border-radius: 14px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+        }
+
+        #wxqrcode {
+            width: 100%;
+            height: 100%;
+        }
+
+        .wx-tip {
+            font-size: 14px;
+            margin-bottom: 20px;
+            opacity: 0.9;
+        }
+
+        .call-btn,
+        .sms-btn {
+            display: block;
+            font-size: 18px;
+            padding: 18px;
+            border-radius: 50px;
+            text-decoration: none;
+            margin: 0 auto 15px;
+            max-width: 300px;
+            border: none;
+            transition: transform 0.25s ease, box-shadow 0.25s ease;
+        }
+
+        .call-btn:hover,
+        .sms-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .call-btn {
+            background: #ff3a3a;
+            color: #fff;
+            box-shadow: 0 6px 20px rgba(255, 58, 58, 0.3);
+        }
+
+        .call-btn:hover {
+            box-shadow: 0 10px 25px rgba(255, 58, 58, 0.35);
+        }
+
+        .sms-btn {
+            background: #1677ff;
+            color: #fff;
+            box-shadow: 0 6px 20px rgba(22, 119, 255, 0.3);
+        }
+
+        .sms-btn:hover {
+            box-shadow: 0 10px 25px rgba(22, 119, 255, 0.35);
+        }
+
+        .tip {
+            font-size: 13px;
+            opacity: 0.9;
+            margin-top: 10px;
+        }
+
+        .loading {
+            pointer-events: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .loading::after {
+            content: "";
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #ffffff;
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: translate(-50%, -50%) rotate(0deg);
+            }
+
+            100% {
+                transform: translate(-50%, -50%) rotate(360deg);
+            }
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 50px;
+            font-size: 16px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .toast.show {
+            opacity: 1;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="car-card">
+            <div class="car-number"></div>
+        </div>
+
+        <div class="notice">
+            抱歉！阻挡您出行，请电话联系，我会立马挪车<br><br>
+            如电话无法接通，请点击下方按钮给我发短信或扫码添加微信
+        </div>
+
+        <div class="wx-box">
+            <canvas id="wxqrcode"></canvas>
+        </div>
+
+        <a href="javascript:void()" onclick="notifyOwner()" class="sms-btn">💬 发送消息</a>
+        <a href="javascript:void()" onclick="callOwner()" class="call-btn">📞 联系车主</a>
+
+        <div class="tip">文明沟通 · 方便你我</div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+    <div id="loadingBox" class="modal">
+        <div class="loading"></div>
+    </div>
+
+    <script>
+        // ======================
+        // 已帮你填好全部信息
+        // ======================
+        const CAR_NUM = "{{no}}";
+        const WECHAT_URL = "{{Wechat}}";
+
+        // 随机渐变背景
+        const gradients = [
+            "linear-gradient(135deg, #4158D0, #746ED8, #C850C0)",
+            "linear-gradient(135deg, #FC5C7D, #6A82FB)",
+            "linear-gradient(135deg, #11998E, #38EF7D)",
+            "linear-gradient(135deg, #EA445A, #F7971E)",
+            "linear-gradient(135deg, #667eea, #764ba2)",
+            "linear-gradient(135deg, #f093fb, #f5576c)",
+            "linear-gradient(135deg, #4facfe, #00f2fe)",
+            "linear-gradient(135deg, #43e97b, #38f9d7)",
+            "linear-gradient(135deg, #fa709a, #fee140)",
+            "linear-gradient(135deg, #30cfd0, #330867)"
+        ];
+        document.body.style.background = gradients[Math.floor(Math.random() * gradients.length)];
+
+        // 自动设置
+        document.querySelector('.car-number').innerText = CAR_NUM;
+
+        // 生成微信二维码
+        window.onload = function () {
+            QRCode.toCanvas(document.getElementById('wxqrcode'), WECHAT_URL, {
+                width: 140,
+                margin: 1,
+                color: { dark: "#000", light: "#fff" }
+            });
+        };
+
+function getCarId() {
+    // 获取当前路径，例如 "/car/1" 或 "/car/1?ref=home"
+    const pathname = window.location.pathname;
+    
+    // 使用正则表达式匹配路径末尾的数字
+    const match = pathname.match(/\/(\d+)$/);
+    
+    // 如果匹配成功，返回捕获组中的数字；否则返回 null
+    return match ? match[1] : null;
+}
+
+        // 发送通知
+        function notifyOwner() {
+            let id = getCarId();
+
+            if (!id) {
+                showToast("未获取到id参数");
+                return;
+            }
+
+            showLoading(true);
+            fetch("/api/notify/message", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    id: id,
+                    message: ""
+                })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    showLoading(false);
+                    if (data.code === 200) {
+                        showToast(data.data);
+                    } else {
+                        showToast(data.message);
+                    }
+                })
+                .catch(error => {
+                    showLoading(false);
+                    console.error("Error sending notification:", error);
+                    alert("通知发送出错，请检查网络连接。");
+                });
+        }
+
+        // 拨打车主电话
+        function callOwner() {
+            let id = getCarId();
+
+            if (!id) {
+                showToast("未获取到id参数");
+                return;
+            }
+            showLoading(true);
+            fetch("/api/notify/call", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    id: id,
+                })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    showLoading(false);
+                    if (data.code === 200) {
+                        window.location.href = "tel:" + data.data;
+                    } else {
+                        showToast(data.message);
+                    }
+                })
+                .catch(error => {
+                    showLoading(false);
+                    console.error("Error sending notification:", error);
+                    alert("通知发送出错，请检查网络连接。");
+                });
+        }
+
+        function showToast(message, duration = 5000) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, duration);
+        }
+
+        // 显示添加模态框
+        function showLoading(isShow) {
+            if (isShow) {
+                document.getElementById('loadingBox').style.display = 'block';
+            }
+            else {
+                document.getElementById('loadingBox').style.display = 'none';
+            }
+        }    
+    </script>
+</body>
+
+</html>
