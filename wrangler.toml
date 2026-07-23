@@ -1,0 +1,8 @@
+name = "movecar-worker"
+main = "_worker.js"
+compatibility_date = "2024-01-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "movecar-db"
+database_id = ""  # 替换为你的D1数据库ID
